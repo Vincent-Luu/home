@@ -14,3 +14,5 @@
 感谢Google LLC的设计规范
 感谢所有使用到的开源js库
 （本人只是一名小小高中生，还不怎么会打代码，请见谅）
+
+请使用https://vincent-luu.github.io/home/体验
