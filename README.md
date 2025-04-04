@@ -1,4 +1,5 @@
 ## Deepseek Chat Gui
+请使用 https://vincent-luu.github.io/home/ 体验
 ### 简介
 一个实现与deepseek api交互的网页端ai对话页面
 ### 特色功能
@@ -15,4 +16,4 @@
 感谢所有使用到的开源js库
 （本人只是一名小小高中生，还不怎么会打代码，请见谅）
 
-请使用https://vincent-luu.github.io/home/体验
+
