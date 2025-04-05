@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek AI 对话</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="assets/js/marked.min.js"></script>
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/highlight.min.js"></script>
+    <link rel="stylesheet" href="assets/css/github.css">
+    <script src="assets/js/index.browser.min.js"></script>
+    
+    <!-- PDF.js 和 Mammoth.js 本地引用 -->
+    <script src="assets/js/pdf.min.js"></script>
+    <script src="assets/js/pdf.worker.min.js"></script>
+    <script src="assets/js/mammoth.browser.min.js"></script>
+    
+    <!-- MathJax 配置 -->
+    <script>
+    MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true
+        },
+        options: {
+            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+            ignoreHtmlClass: 'tex-ignore'
+        },
+        chtml: {
+            fontURL: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2'
+        }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --md-sys-color-primary: #6750A4;
+            --md-sys-color-on-primary: #FFFFFF;
+            --md-sys-color-primary-container: #EADDFF;
+            --md-sys-color-on-primary-container: #21005D;
+            --md-sys-color-secondary: #625B71;
+            --md-sys-color-on-secondary: #FFFFFF;
+            --md-sys-color-secondary-container: #E8DEF8;
+            --md-sys-color-on-secondary-container: #1D192B;
+            --md-sys-color-tertiary: #7D5260;
+            --md-sys-color-on-tertiary: #FFFFFF;
+            --md-sys-color-tertiary-container: #FFD8E4;
+            --md-sys-color-on-tertiary-container: #31111D;
+            --md-sys-color-error: #B3261E;
+            --md-sys-color-on-error: #FFFFFF;
+            --md-sys-color-error-container: #F9DEDC;
+            --md-sys-color-on-error-container: #410E0B;
+            --md-sys-color-outline: #79747E;
+            --md-sys-color-background: #FFFBFE;
+            --md-sys-color-on-background: #1C1B1F;
+            --md-sys-color-surface: #FFFBFE;
+            --md-sys-color-on-surface: #1C1B1F;
+            --md-sys-color-surface-variant: #E7E0EC;
+            --md-sys-color-on-surface-variant: #49454F;
+            --md-sys-color-inverse-surface: #313033;
+            --md-sys-color-inverse-on-surface: #F4EFF4;
+            --md-sys-color-shadow: #000000;
+            
+            --md-ref-typeface-plain: 'Roboto', sans-serif;
+            
+            --background-image: none;
+            --background-overlay: rgba(255, 255, 255, 0.85);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--md-ref-typeface-plain);
+        }
+        
+        body {
+            background-color: var(--md-sys-color-background);
+            color: var(--md-sys-color-on-background);
+            min-height: 100vh;
+            display: flex;
+            position: relative;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: var(--background-image);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            z-index: -1;
+        }
+        
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--background-overlay);
+            z-index: -1;
+        }
+        
+        a {
+        color: var(--md-sys-color-primary);
+        text-decoration: none;
+        transition: color 0.2s ease;
+        }
+        
+        a:hover {
+            color: color-mix(in srgb, var(--md-sys-color-primary) 80%, black);
+            text-decoration: underline;
+        }
+        
+        a:visited {
+            color: var(--md-sys-color-secondary);
+        }
+        
+        /* 消息中的链接 */
+        .message-text a {
+            color: var(--md-sys-color-primary);
+        }
+        
+        .message-text a:hover {
+            color: color-mix(in srgb, var(--md-sys-color-primary) 80%, black);
+            text-decoration: underline;
+        }
+    
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 280px;
+            background-color: var(--md-sys-color-surface);
+            border-right: 1px solid var(--md-sys-color-surface-variant);
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 100;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            transform: translateX(-100%);
+        }
+        
+        .sidebar.visible {
+            transform: translateX(0);
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .sidebar-header {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--md-sys-color-surface-variant);
+        }
+        
+        .sidebar-title {
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+        
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .conversation-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--md-sys-color-surface-variant);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .conversation-item:hover {
+            background-color: var(--md-sys-color-surface-variant);
+        }
+        
+        .conversation-item.active {
+            background-color: var(--md-sys-color-primary-container);
+        }
+        
+        .conversation-icon {
+            font-size: 1rem;
+            color: var(--md-sys-color-primary);
+        }
+        
+        /* 主内容区域容器 */
+        .app-container {
+            display: flex;
+            flex: 1;
+            min-height: 100vh;
+        }
+        
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* 侧边栏遮罩 */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 99;
+            display: none;
+        }
+        
+        .sidebar-overlay.visible {
+            display: block;
+        }
+        
+        header {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        
+        .model-selector {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .model-selector-label {
+            font-size: 0.875rem;
+        }
+        
+        select {
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        
+        select:hover {
+            background-color: color-mix(in srgb, var(--md-sys-color-primary-container) 90%, black);
+        }
+        
+        select:focus {
+            box-shadow: 0 0 0 2px var(--md-sys-color-outline);
+        }
+        
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .icon-button:hover {
+            background-color: color-mix(in srgb, var(--md-sys-color-primary-container) 90%, black);
+        }
+        
+        .icon-button:disabled {
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
+            cursor: not-allowed;
+        }
+        
+        /* 文件上传按钮样式 */
+        #file-upload-button {
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
+            margin-right: 4px;
+        }
+        
+        #file-upload-button:hover {
+            background-color: color-mix(in srgb, var(--md-sys-color-surface-variant) 90%, black);
+        }
+        
+        /* 聊天区域 */
+        .chat-area {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .message {
+            display: flex;
+            gap: 16px;
+            animation: fadeIn 0.3s ease-out;
+            max-width: 100%;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .user .avatar {
+            background-color: var(--md-sys-color-tertiary-container);
+            color: var(--md-sys-color-tertiary);
+        }
+        
+        .message-content {
+            flex: 1;
+            padding-top: 4px;
+            max-width: calc(100% - 56px); /* 头像宽度 + gap */
+        }
+        
+        .message-role {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--md-sys-color-primary);
+        }
+        
+        .user .message-role {
+            color: var(--md-sys-color-tertiary);
+        }
+        
+        .message-text {
+            line-height: 1.6;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .message-text p {
+            margin-bottom: 8px;
+        }
+        
+        .message-text pre {
+            background-color: var(--md-sys-color-surface-variant);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+            position: relative;
+            max-width: 100%;
+    overflow-x: auto;
+    box-sizing: border-box;
+        }
+        
+        .message-text code {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--md-sys-color-surface-variant);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .message-text blockquote {
+            border-left: 4px solid var(--md-sys-color-primary);
+            padding-left: 16px;
+            margin: 12px 0;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        
+        /* 数学公式样式 */
+        .MathJax {
+            outline: none;
+        }
+        mjx-container[jax="CHTML"] {
+            display: inline-block;
+            margin: 0.5em 0;
+        }
+        mjx-container[jax="CHTML"][display="true"] {
+            display: block !important;
+            margin: 1em 0;
+        }
+        
+        /* 输入区域 */
+        .input-container {
+            position: sticky;
+            bottom: 0;
+            background-color: var(--md-sys-color-background);
+            padding: 16px 24px;
+            border-top: 1px solid var(--md-sys-color-surface-variant);
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        
+        textarea {
+            flex: 1;
+            min-height: 56px;
+            max-height: 200px;
+            padding: 16px;
+            border-radius: 16px;
+            border: none;
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface);
+            resize: none;
+            outline: none;
+            font-size: 1rem;
+            line-height: 1.5;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        textarea:focus {
+            box-shadow: 0 0 0 2px var(--md-sys-color-primary);
+        }
+        
+        button {
+            height: 56px;
+            width: 56px;
+            border-radius: 16px;
+            border: none;
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, black);
+        }
+        
+        button:disabled {
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
+            cursor: not-allowed;
+        }
+        
+        /* 打字指示器 */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--md-sys-color-primary);
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+        
+        /* 思考状态 */
+        .thinking-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--md-sys-color-primary);
+            font-size: 0.875rem;
+            margin-top: 8px;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            color: var(--md-sys-color-primary);
+        }
+        
+        /* 删除对话按钮 */
+        .delete-conversation {
+            margin-left: auto;
+            color: var(--md-sys-color-error);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .conversation-item:hover .delete-conversation {
+            opacity: 1;
+        }
+
+        .bg-image-remove {
+            display: none; /* 默认隐藏 */
+            margin-top: 8px;
+            padding: 8px;
+            background-color: var(--md-sys-color-error-container);
+            color: var(--md-sys-color-error);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 40px; /* 固定宽度 */
+            height: 40px; /* 固定高度 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bg-image-remove .material-icons {
+            font-size: 20px; /* 图标大小 */
+        }
+        
+        /* 代码块复制按钮 */
+        .copy-code-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 8px;
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .copy-code-button:hover {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+        }
+
+        .message-text pre:hover .copy-code-button {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .copy-code-button {
+                opacity: 1; /* 在移动设备上始终显示 */
+                padding: 2px 4px;
+                font-size: 0.65rem;
+            }
+            
+            .copy-code-button span:not(.material-icons) {
+                display: none; /* 在小屏幕上只显示图标 */
+            }
+        }
+        
+        /* 确保 tex-ignore 类的内容不会被 MathJax 处理 */
+        .message-text pre code {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+            pointer-events: auto;
+            white-space: pre;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+        }
+
+        .message-text img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+
+        /* 确保图片不会溢出聊天区域 */
+        .message-content {
+            overflow: hidden;
+        }
+
+        /* 推理内容区域样式 */
+        .reasoning-container {
+            margin-top: 12px;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .reasoning-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: var(--md-sys-color-surface-variant);
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .reasoning-content {
+            padding: 12px;
+            background-color: var(--md-sys-color-surface);
+            font-family: 'Roboto Mono', monospace;
+            white-space: pre-wrap;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none; /* 默认隐藏 */
+        }
+        
+        .reasoning-content.visible {
+            display: block;
+        }
+        
+        .reasoning-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        /* 文件上传信息显示区域 */
+        .file-info-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background-color: var(--md-sys-color-surface-variant);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .file-info-icon {
+            color: var(--md-sys-color-primary);
+        }
+        
+        .file-info-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .file-info-remove {
+            color: var(--md-sys-color-error);
+            cursor: pointer;
+        }
+
+        .file-message {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background-color: var(--md-sys-color-surface-variant);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        }
+
+        .file-name {
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        }
+        
+        /* 响应式设计 */
+        @media (min-width: 769px) {
+            .sidebar {
+                position: relative;
+                transform: translateX(0);
+                box-shadow: none;
+            }
+            
+            .mobile-menu-button {
+                display: none;
+            }
+            
+            .sidebar-overlay {
+                display: none !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 1.25rem;
+            }
+            
+            .chat-area {
+                padding: 16px;
+            }
+            
+            .input-container {
+                padding: 16px;
+            }
+            
+            .model-selector-label {
+                display: none;
+            }
+            
+            .sidebar {
+                width: 85%;
+                max-width: 300px;
+            }
+        }
+
+        /* 16:9 屏幕适配 */
+        @media (min-width: 769px) and (max-height: 900px) {
+            .chat-area {
+                padding: 16px;
+            }
+            
+            .message {
+                gap: 12px;
+            }
+            
+            .avatar {
+                width: 36px;
+                height: 36px;
+                border-radius: 18px;
+            }
+            
+            .message-content {
+                max-width: calc(100% - 48px);
+            }
+            
+            .input-container {
+                padding: 12px 16px;
+            }
+            
+            textarea {
+                min-height: 48px;
+                padding: 12px 16px;
+            }
+            
+            button {
+                height: 48px;
+                width: 48px;
+            }
+        }
+
+        /* 超宽屏幕适配 */
+        @media (min-width: 1600px) {
+            .sidebar {
+                width: 320px;
+            }
+            
+            .chat-area {
+                max-width: 1200px;
+                margin: 0 auto;
+                width: 100%;
+            }
+        }
+
+        /* 超小屏幕适配 */
+        @media (max-width: 400px) {
+            .message {
+                gap: 8px;
+            }
+            
+            .avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 16px;
+            }
+            
+            .message-content {
+                max-width: calc(100% - 40px);
+            }
+            
+            .message-text {
+                font-size: 0.9rem;
+            }
+        }
+        /* 设置按钮样式 */
+        .settings-button {
+            position: fixed;
+            left: 16px;
+            bottom: 16px;
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .settings-button:hover {
+            transform: scale(1.1);
+        }
+        
+        /* 设置面板样式 */
+        .settings-panel {
+            position: fixed;
+            left: 80px;
+            bottom: 16px;
+            width: 300px;
+            background-color: var(--md-sys-color-surface);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 16px;
+            z-index: 1001;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .settings-panel.visible {
+            display: flex;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .settings-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--md-sys-color-primary);
+        }
+        
+        .settings-option {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .settings-label {
+            font-size: 0.9rem;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        
+        .settings-hint {
+            font-size: 0.75rem;
+            color: var(--md-sys-color-on-surface-variant);
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+        
+        #api-key-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--md-sys-color-outline);
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        
+        #api-key-input:focus {
+            border-color: var(--md-sys-color-primary);
+            box-shadow: 0 0 0 2px var(--md-sys-color-primary-container);
+        }
+        
+        .bg-image-preview {
+            width: 100%;
+            height: 120px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px;
+            margin-top: 8px;
+            border: 1px solid var(--md-sys-color-outline);
+            display: none;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .bg-image-remove {
+                width: 36px;
+                height: 36px;
+            }
+            .bg-image-remove .material-icons {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+        <!-- 设置面板 -->
+    <div class="settings-panel" id="settings-panel">
+        <div class="settings-title">API设置</div>
+        <div class="settings-option">
+            <div class="settings-label">DeepSeek API密钥</div>
+            <input type="password" id="api-key-input" placeholder="输入你的API密钥">
+            <div class="settings-hint">密钥仅保存在本地浏览器中</div>
+        </div>
+        
+        <div class="settings-title">背景设置</div>
+        <div class="settings-option">
+            <div class="settings-label">选择背景图片</div>
+            <input type="file" id="bg-image-input" accept="image/*">
+            <div class="bg-image-preview" id="bg-image-preview"></div>
+            <button class="bg-image-remove" id="bg-image-remove">
+                <span class="material-icons">delete</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- 侧边栏 -->
+    <div class="sidebar" id="sidebar">
+        <!-- 设置按钮 -->
+        <div class="settings-button" id="settings-button">
+            <span class="material-icons">settings</span>
+        </div>
+        
+        <div class="sidebar-header">
+            <div class="sidebar-title">对话历史</div>
+            <button class="icon-button" id="new-chat-button">
+                <span class="material-icons">add</span>
+            </button>
+        </div>
+        <div class="conversation-list" id="conversation-list">
+            <!-- 对话列表会在这里动态添加 -->
+        </div>
+    </div>
+    
+    
+    <!-- 主应用容器 -->
+    <div class="app-container">
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <header>
+                <button class="icon-button mobile-menu-button" id="mobile-menu-button">
+                    <span class="material-icons">menu</span>
+                </button>
+                <div class="header-title">
+                    <span>DeepSeek AI</span>
+                </div>
+                <div class="header-controls">
+                    <div class="model-selector">
+                        <span class="model-selector-label">模型:</span>
+                        <select id="model-select">
+                            <option value="deepseek-chat">DeepSeek Chat</option>
+                            <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+                        </select>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="chat-area" id="chat-container">
+                <!-- 空状态 -->
+                <div class="empty-state" id="empty-state">
+                    <span class="material-icons empty-icon">forum</span>
+                    <h3>开始新的对话</h3>
+                    <p>点击左上角的"+"按钮创建一个新对话，或者从侧边栏选择一个历史对话</p>
+                </div>
+                <!-- 消息会在这里动态添加 -->
+            </div>
+            
+            <div class="input-container">
+                <!-- 文件信息显示区域 -->
+                <div id="file-info-area" style="display: none;"></div>
+                
+                <div class="input-area">
+                    <textarea id="user-input" placeholder="输入你的问题..." rows="1"></textarea>
+                    <!-- 文件上传按钮 -->
+                    <label for="file-upload" class="icon-button" id="file-upload-button" title="上传文件">
+                        <span class="material-icons">attach_file</span>
+                    </label>
+                    <input type="file" id="file-upload" accept=".txt,.pdf,.docx,.py,.js,.java,.cpp,.html,.css,.go,.rb,.php,.sh,.md" style="display: none;">
+                    <button id="send-button" disabled>
+                        <span class="material-icons">send</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- 侧边栏遮罩 -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    
+
+    <script>
+        // 配置
+        window.currentFileContent = null;
+        const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        let apiKey = localStorage.getItem('deepseek-api-key') || '';
+        
+        // 初始化 PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/js/pdf.worker.min.js';
+        
+        // DOM 元素
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const modelSelect = document.getElementById('model-select');
+        const newChatButton = document.getElementById('new-chat-button');
+        const conversationList = document.getElementById('conversation-list');
+        const sidebar = document.getElementById('sidebar');
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const emptyState = document.getElementById('empty-state');
+        const fileUpload = document.getElementById('file-upload');
+        const fileInfoArea = document.getElementById('file-info-area');
+
+        // 文件处理函数
+        async function extractFileContent(file, fileExtension) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = async (event) => {
+            try {
+                let content = '';
+                
+                switch (fileExtension) {
+                    case 'txt':
+                    case 'md':
+                    case 'py':
+                    case 'js':
+                    case 'java':
+                    case 'cpp':
+                    case 'html':
+                    case 'css':
+                    case 'go':
+                    case 'rb':
+                    case 'php':
+                    case 'sh':
+                        // 直接读取文本文件
+                        content = event.target.result;
+                        // 确保内容不是空的
+                        if (!content.trim()) {
+                            throw new Error('文件内容为空');
+                        }
+                        break;
+                        
+                    case 'pdf':
+                        // 使用PDF.js提取文本
+                        content = await extractTextFromPdf(event.target.result);
+                        break;
+                        
+                    case 'docx':
+                        // 使用Mammoth.js提取文本
+                        content = await extractTextFromDocx(event.target.result);
+                        break;
+                        
+                    default:
+                        throw new Error('不支持的文件类型');
+                }
+                
+                resolve(content);
+            } catch (error) {
+                reject(error);
+            }
+        };
+        
+        reader.onerror = () => {
+            reject(new Error('文件读取失败'));
+        };
+        
+        // 对于所有文本和代码文件都使用readAsText
+        if (['txt', 'md', 'py', 'js', 'java', 'cpp', 'html', 'css', 'go', 'rb', 'php', 'sh'].includes(fileExtension)) {
+            reader.readAsText(file);
+        } 
+        // 对于PDF和DOCX使用readAsArrayBuffer
+        else if (fileExtension === 'pdf' || fileExtension === 'docx') {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reject(new Error('不支持的文件类型'));
+        }
+    });
+}
+
+        async function extractTextFromPdf(arrayBuffer) {
+            const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+            const pdf = await loadingTask.promise;
+            let text = '';
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                const strings = content.items.map(item => item.str);
+                text += strings.join(' ') + '\n';
+            }
+            
+            return text;
+        }
+
+        async function extractTextFromDocx(arrayBuffer) {
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            return result.value;
+        }
+
+        // 显示文件信息
+        function showFileInfo(fileName, fileType) {
+            fileInfoArea.style.display = 'block';
+            fileInfoArea.innerHTML = `
+                <div class="file-info-container">
+                    <span class="material-icons file-info-icon">description</span>
+                    <span class="file-info-name" title="${fileName}">${fileName}</span>
+                    <span class="material-icons file-info-remove" onclick="removeFileInfo()">close</span>
+                </div>
+            `;
+        }
+
+        // 移除文件信息
+        function removeFileInfo() {
+            fileInfoArea.style.display = 'none';
+            fileInfoArea.innerHTML = '';
+            fileUpload.value = '';
+            delete window.currentFileContent;
+            
+            // 如果输入框为空，禁用发送按钮
+            if (userInput.value.trim() === '') {
+                sendButton.disabled = true;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化设置按钮
+            const settingsButton = document.getElementById('settings-button');
+            const settingsPanel = document.getElementById('settings-panel');
+            const bgImageInput = document.getElementById('bg-image-input');
+            const bgImagePreview = document.getElementById('bg-image-preview');
+            const bgImageRemove = document.getElementById('bg-image-remove');
+            const apiKeyInput = document.getElementById('api-key-input');
+            const fac = new FastAverageColor();
+            
+            // 设置API密钥输入框的值
+            apiKeyInput.value = apiKey;
+            
+            // 监听API密钥变化
+            apiKeyInput.addEventListener('change', (e) => {
+                apiKey = e.target.value.trim();
+                localStorage.setItem('deepseek-api-key', apiKey);
+            });
+            
+            // 点击设置按钮切换面板
+            settingsButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                settingsPanel.classList.toggle('visible');
+            });
+            
+            // 点击页面其他区域关闭面板
+            document.addEventListener('click', (e) => {
+                if (!settingsPanel.contains(e.target) && e.target !== settingsButton){
+                    settingsPanel.classList.remove('visible');
+                }
+            });
+            
+            // 阻止面板内部点击事件冒泡
+            settingsPanel.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            
+            // 移动端触摸支持
+            settingsButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                settingsPanel.classList.toggle('visible');
+            });
+
+            // 自动调整输入框高度
+            userInput.addEventListener('input', () => {
+                userInput.style.height = 'auto';
+                userInput.style.height = `${Math.min(userInput.scrollHeight, 200)}px`;
+                
+                // 启用/禁用发送按钮
+                sendButton.disabled = userInput.value.trim() === '' || isWaitingForResponse;
+            });
+            
+            // 发送消息
+            sendButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendButton.disabled) {
+                        sendMessage();
+                    }
+                }
+            });
+            
+            // 新对话按钮
+            newChatButton.addEventListener('click', startNewConversation);
+            
+            // 侧边栏切换
+            mobileMenuButton.addEventListener('click', toggleSidebar);
+            sidebarOverlay.addEventListener('click', toggleSidebar);
+            
+            // 文件上传处理
+            fileUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+
+            // 检查文件类型是否支持
+            if (!['pdf', 'docx', 'txt', 'md', 'py', 'js', 'java', 'cpp', 'html', 'css', 'go', 'rb', 'php', 'sh'].includes(fileExtension)) {
+                alert('不支持的文件格式，请上传文本/代码/PDF/Word文件');
+                return;
+            }
+
+            try {
+                // 显示文件信息
+                showFileInfo(fileName, fileExtension);
+                
+                // 提取文件内容
+                const fileContent = await extractFileContent(file, fileExtension);
+                
+                // 将文件内容存储在变量中
+                window.currentFileContent = {
+                    content: fileContent,
+                    name: fileName,
+                    type: fileExtension
+                };
+                
+                // 在输入框中只显示提示
+                userInput.value = '我的问题: ';
+                userInput.focus();
+                
+                // 启用发送按钮
+                sendButton.disabled = false;
+            } catch (error) {
+                console.error('文件处理错误:', error);
+                alert('文件处理失败: ' + error.message);
+                removeFileInfo();
+            }
+        });
+            // 从本地存储加载对话
+            loadConversations();
+            
+            // 如果没有对话，创建一个新的
+            if (conversations.length === 0) {
+                startNewConversation();
+            } else {
+                // 加载最后一个对话
+                switchToConversation(conversations[conversations.length - 1].id);
+            }
+
+            // 背景图片功能
+            
+            // 图片选择事件
+            bgImageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type.match('image.*')) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(event) {
+                        applyBackgroundImage(event.target.result);
+                    };
+                    
+                    reader.onerror = function(error) {
+                        console.error('Error reading file:', error);
+                        alert('图片加载失败，请重试');
+                        removeBackgroundImage(); 
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // 移除背景
+            bgImageRemove.addEventListener('click', () => {
+                removeBackgroundImage();
+            });
+
+            // 应用背景函数
+            function applyBackgroundImage(imageUrl) {
+                console.log('Applying background:', imageUrl);
+                
+                // 设置CSS变量
+                document.documentElement.style.setProperty('--background-image', `url(${imageUrl})`);
+                document.documentElement.style.setProperty('--background-overlay', 'rgba(255, 255, 255, 0.7)');
+                
+                // 更新UI
+                bgImagePreview.style.backgroundImage = `url(${imageUrl})`;
+                bgImagePreview.style.display = 'block';
+                bgImageRemove.style.display = 'block';
+                
+                // 保存到本地存储
+                localStorage.setItem('deepseek-bg-image', imageUrl);
+                
+                // 分析图片颜色并更新主题
+                analyzeImageColor(imageUrl);
+            }
+
+            // 移除背景函数
+            function removeBackgroundImage() {
+                document.documentElement.style.setProperty('--background-image', 'none');
+                document.documentElement.style.setProperty('--background-overlay', 'rgba(255, 255, 255, 1)');
+                bgImagePreview.style.display = 'none';
+                bgImageRemove.style.display = 'none';
+                localStorage.removeItem('deepseek-bg-image');
+                resetThemeColors();
+            }
+
+            // 分析图片颜色
+            function analyzeImageColor(imageUrl) {
+                fac.getColorAsync(imageUrl)
+                    .then(color => {
+                        console.log('颜色分析结果:', color);
+                        
+                        // 兼容两种格式：优先用 value 数组，其次尝试解析 rgb 字符串
+                        let rgbArray;
+                        if (Array.isArray(color.value) && color.value.length >= 3) {
+                            rgbArray = color.value.slice(0, 3); // 取前3位（忽略alpha）
+                        } else if (typeof color.rgb === 'string') {
+                            // 解析 "rgb(86,77,74)" 格式
+                            const match = color.rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                            if (match) rgbArray = [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
+                        }
+
+                        if (!rgbArray) {
+                            throw new Error(`无法识别的颜色格式: ${JSON.stringify(color)}`);
+                        }
+
+                        updateThemeColors({ rgb: rgbArray, isDark: color.isDark });
+                    })
+                    .catch(e => {
+                        console.error('颜色分析失败:', e);
+                        resetThemeColors();
+                    });
+            }
+
+            // 根据图片颜色调整主题
+            function updateThemeColors(color) {
+                if (!color || !color.rgb) {
+                    console.error('Invalid color object:', color);
+                    return;
+                }
+
+                // 将 RGB 转换为 HSL
+                const hsl = rgbToHsl(color.rgb[0], color.rgb[1], color.rgb[2]);
+                console.log('HSL values:', hsl); // 调试输出
+
+                // 调整主色调（基于 HSL 值）
+                const primaryHue = hsl[0];
+                const primarySaturation = Math.min(50, hsl[1]); // 限制饱和度避免过于鲜艳
+                const primaryLightness = 40; // 固定亮度值
+                const primaryColor = hslToHex(primaryHue, primarySaturation, primaryLightness);
+                const primaryContainerColor = hslToHex(primaryHue, primarySaturation, 90);
+
+                // 调整次要色调（主色调 + 30°）
+                const secondaryHue = (primaryHue + 30) % 360;
+                const secondaryColor = hslToHex(secondaryHue, 30, 40);
+                const secondaryContainerColor = hslToHex(secondaryHue, 30, 90);
+
+                // 更新 CSS 变量
+                document.documentElement.style.setProperty('--md-sys-color-primary', primaryColor);
+                document.documentElement.style.setProperty('--md-sys-color-primary-container', primaryContainerColor);
+                document.documentElement.style.setProperty('--md-sys-color-secondary', secondaryColor);
+                document.documentElement.style.setProperty('--md-sys-color-secondary-container', secondaryContainerColor);
+                document.documentElement.style.setProperty('--md-sys-color-on-primary-container',primaryColor)
+
+                // 调整背景透明度（暗色背景用较高透明度，亮色背景用较低透明度）
+                const overlayAlpha = color.isDark ? 0.85 : 0.7;
+                document.documentElement.style.setProperty('--background-overlay', `rgba(255, 255, 255, ${overlayAlpha})`);
+
+                console.log('Updated theme colors:', {
+                    primary: primaryColor,
+                    primaryContainer: primaryContainerColor,
+                    secondary: secondaryColor,
+                    secondaryContainer: secondaryContainerColor,
+                    overlayAlpha: overlayAlpha
+                });
+            }
+            
+            // 重置主题颜色
+            function resetThemeColors() {
+                // 恢复默认 Material Design 主题色
+                document.documentElement.style.setProperty('--md-sys-color-primary', '#6750A4');
+                document.documentElement.style.setProperty('--md-sys-color-primary-container', '#EADDFF');
+                document.documentElement.style.setProperty('--md-sys-color-secondary', '#625B71');
+                document.documentElement.style.setProperty('--md-sys-color-secondary-container', '#E8DEF8');
+                document.documentElement.style.setProperty('--background-overlay', 'rgba(255, 255, 255, 0.85)');
+                document.documentElement.style.setProperty('--md-sys-color-on-primary-container','#21005d')
+            }
+            
+            // RGB转HSL
+            function rgbToHsl(r, g, b) {
+                r /= 255, g /= 255, b /= 255;
+                const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+
+                if (max === min) {
+                    h = s = 0;
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+
+                console.log('RGB to HSL:', { r, g, b }, '->', { h: h * 360, s: s * 100, l: l * 100 });
+                return [h * 360, s * 100, l * 100];
+            }
+
+            // HSL转Hex
+            function hslToHex(h, s, l) {
+                l /= 100;
+                const a = s * Math.min(l, 1 - l) / 100;
+                const f = n => {
+                    const k = (n + h / 30) % 12;
+                    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                    return Math.round(255 * color).toString(16).padStart(2, '0');
+                };
+                const hex = `#${f(0)}${f(8)}${f(4)}`;
+                console.log('HSL to Hex:', { h, s, l }, '->', hex);
+                return hex;
+            }
+
+            // 加载保存的背景图片
+            const savedBgImage = localStorage.getItem('deepseek-bg-image');
+            if (savedBgImage) {
+                applyBackgroundImage(savedBgImage);
+                bgImageRemove.style.display = 'flex';
+                bgImagePreview.style.backgroundImage = `url(${savedBgImage})`;
+                bgImagePreview.style.display = 'block';
+            } else {
+                bgImageRemove.style.display = 'none';
+                bgImagePreview.style.display = 'none';
+            }
+
+            // 暴露给全局
+            window.removeFileInfo = removeFileInfo;
+        });
+
+        // 对话管理
+        let conversations = [];
+        let currentConversationId = null;
+        let isWaitingForResponse = false;
+        let isThinking = false;
+        
+        // 配置marked.js
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            mangle: false,  // 防止转义LaTeX特殊字符
+            headerIds: false
+        });
+        
+        // 切换侧边栏
+        function toggleSidebar() {
+            sidebar.classList.toggle('visible');
+            sidebarOverlay.classList.toggle('visible');
+        }
+        
+        // 从本地存储加载对话
+        function loadConversations() {
+            const savedConversations = localStorage.getItem('deepseek-conversations');
+            if (savedConversations) {
+                conversations = JSON.parse(savedConversations);
+                renderConversationList();
+            }
+        }
+        
+        // 保存对话到本地存储
+        function saveConversations() {
+            localStorage.setItem('deepseek-conversations', JSON.stringify(conversations));
+        }
+        
+        // 渲染对话列表
+        function renderConversationList() {
+            conversationList.innerHTML = '';
+            
+            if (conversations.length === 0) {
+                const emptyItem = document.createElement('div');
+                emptyItem.className = 'conversation-item';
+                emptyItem.textContent = '没有历史对话';
+                conversationList.appendChild(emptyItem);
+                return;
+            }
+            
+            // 按创建时间排序（最新的在前面）
+            const sortedConversations = [...conversations].sort((a, b) => 
+                new Date(b.createdAt) - new Date(a.createdAt)
+            );
+            
+            sortedConversations.forEach(conversation => {
+                const conversationElement = document.createElement('div');
+                conversationElement.className = `conversation-item ${conversation.id === currentConversationId ? 'active' : ''}`;
+                
+                conversationElement.innerHTML = `
+                    <span class="material-icons conversation-icon">forum</span>
+                    <span class="conversation-title">${conversation.title || `新对话 ${conversations.indexOf(conversation) + 1}`}</span>
+                    <span class="material-icons delete-conversation">delete</span>
+                `;
+                
+                const titleElement = conversationElement.querySelector('.conversation-title');
+                titleElement.addEventListener('click', () => {
+                    switchToConversation(conversation.id);
+                    toggleSidebar();
+                });
+                
+                // 删除按钮
+                const deleteButton = conversationElement.querySelector('.delete-conversation');
+                deleteButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteConversation(conversation.id);
+                });
+                
+                conversationList.appendChild(conversationElement);
+            });
+        }
+        
+        // 删除对话
+        function deleteConversation(conversationId) {
+            if (confirm('确定要删除这个对话吗？此操作不可撤销。')) {
+                conversations = conversations.filter(c => c.id !== conversationId);
+                saveConversations();
+                
+                if (conversationId === currentConversationId) {
+                    if (conversations.length > 0) {
+                        switchToConversation(conversations[0].id);
+                    } else {
+                        startNewConversation();
+                    }
+                }
+                
+                renderConversationList();
+            }
+        }
+        
+        // 开始新对话
+        function startNewConversation() {
+            const newConversationId = Date.now().toString();
+            const newConversation = {
+                id: newConversationId,
+                title: `新对话 ${conversations.length + 1}`,
+                history: [],
+                model: modelSelect.value,
+                createdAt: new Date().toISOString()
+            };
+            
+            conversations.push(newConversation);
+            saveConversations();
+            
+            switchToConversation(newConversationId);
+            renderConversationList();
+            
+            // 关闭侧边栏
+            toggleSidebar();
+        }
+        
+        // 切换到指定对话
+        function switchToConversation(conversationId) {
+            const conversation = conversations.find(c => c.id === conversationId);
+            if (!conversation) return;
+            
+            currentConversationId = conversationId;
+            modelSelect.value = conversation.model;
+            
+            // 清空聊天界面并重新加载消息
+            chatContainer.innerHTML = '';
+            
+            // 添加历史消息
+           // 修改 switchToConversation 函数中的消息加载部分
+        if (conversation.history.length > 0) {
+        emptyState.style.display = 'none';
+        conversation.history.forEach(message => {
+            // 对于用户消息，如果有文件信息，同时显示文件名和用户问题
+            if (message.role === 'user' && message.fileInfo) {
+                // 组合显示文件信息和用户问题
+                const displayContent = `已上传文件: ${message.fileInfo.name}\n\n${message.content.replace('我的问题: ', '')}`;
+                addMessage('user', displayContent, false, conversationId, null, message.fileInfo);
+            } else {
+                addMessage(message.role, message.content, false, conversationId);
+            }
+        });
+    }
+            
+            // 更新对话列表的高亮状态
+            renderConversationList();
+            
+            // 滚动到底部
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // 获取当前对话
+        function getCurrentConversation() {
+            return conversations.find(c => c.id === currentConversationId);
+        }
+        
+        // 更新对话标题（基于第一条消息）
+        function updateConversationTitle(conversationId, message) {
+            const conversation = conversations.find(c => c.id === conversationId);
+            if (!conversation) return;
+            
+            // 如果已经有标题或者不是用户的第一条消息，不更新
+            if (conversation.title || conversation.history.length > 1) return;
+            
+            // 从消息中提取前20个字符作为标题
+            const title = message.length > 20 ? message.substring(0, 20) + '...' : message;
+            conversation.title = title;
+            
+            saveConversations();
+            renderConversationList();
+        }
+        
+        // 发送消息
+        async function sendMessage() {
+            // 检查API密钥
+            if (!apiKey) {
+                alert('请先在设置面板中输入API密钥');
+                document.getElementById('settings-panel').classList.add('visible');
+                document.getElementById('api-key-input').focus();
+                return;
+            }
+            
+            const message = userInput.value.trim();
+            if (message === '' || isWaitingForResponse) return;
+            
+            const currentConversation = getCurrentConversation();
+            if (!currentConversation) return;
+            
+            // 隐藏空状态
+            emptyState.style.display = 'none';
+
+            // 如果有文件内容，整合到消息中
+            let messageContent = message;
+        let fileInfo = null;
+    
+        if (window.currentFileContent) {
+            // 组合文件内容和用户问题
+            messageContent = `文件内容:\n${window.currentFileContent.content}\n\n我的问题: ${message}`;
+            fileInfo = {
+                name: window.currentFileContent.name,
+                type: window.currentFileContent.type
+            };
+            // 清除文件内容
+            delete window.currentFileContent;
+        }
+            
+            // 添加用户消息到聊天界面
+            addMessage('user', message, false, currentConversation.id, null, fileInfo);
+            
+           // 添加到对话历史
+        currentConversation.history.push({ 
+            role: 'user', 
+            content: messageContent,
+            fileInfo: fileInfo  // 保存文件信息供历史记录显示
+        });
+            
+            // 更新对话标题（如果是第一条消息）
+            updateConversationTitle(currentConversation.id, message);
+            
+            // 清空输入框并禁用发送按钮
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            sendButton.disabled = true;
+            isWaitingForResponse = true;
+            
+            // 如果是Reasoner模型，显示Thinking状态
+            const selectedModel = modelSelect.value;
+            if (selectedModel === 'deepseek-reasoner') {
+                isThinking = true;
+                showThinkingIndicator();
+            }
+            
+            // 显示正在输入指示器
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'message';
+            typingIndicator.innerHTML = `
+                <div class="avatar">
+                    <span class="material-icons">smart_toy</span>
+                </div>
+                <div class="message-content">
+                    <div class="message-role">DeepSeek AI</div>
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(typingIndicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            try {
+                // 准备 API 请求
+                currentConversation.model = selectedModel;
+                
+                // 发送完整对话历史（上下文记忆默认开启）
+                const messagesToSend = currentConversation.history.map(message => {
+                // 创建一个新对象，只包含role和content
+                const { role, content } = message;
+                return { role, content };
+                });
+                
+                // 发送请求
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: messagesToSend,
+                        stream: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API 请求失败: ${response.status}`);
+                }
+                
+                // 处理流式响应
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let assistantMessage = '';
+                let reasoningContent = '';
+                let messageElement = null;
+                let isReasonerModel = selectedModel === 'deepseek-reasoner';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(line => line.trim() !== '');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.substring(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.choices[0]?.delta?.content || '';
+                                const reasoning = parsed.choices[0]?.delta?.reasoning_content || '';
+                                
+                                if (content || reasoning) {
+                                    assistantMessage += content;
+                                    reasoningContent += reasoning;
+                                    
+                                    // 如果是第一条内容块，创建消息元素并移除正在输入指示器
+                                    if (!messageElement) {
+                                        chatContainer.removeChild(typingIndicator);
+                                        messageElement = addMessage(
+                                            'assistant', 
+                                            assistantMessage, 
+                                            true, 
+                                            currentConversation.id,
+                                            isReasonerModel ? reasoningContent : null
+                                        );
+                                    } else {
+                                        // 更新现有消息内容
+                                        messageElement.querySelector('.message-text').innerHTML = marked.parse(assistantMessage);
+                                        
+                                        // 如果是Reasoner模型，更新推理内容
+                                        if (isReasonerModel) {
+                                            const reasoningElement = messageElement.querySelector('.reasoning-content');
+                                            if (reasoningElement) {
+                                                reasoningElement.textContent = reasoningContent;
+                                            }
+                                        }
+                                        
+                                        highlightCodeBlocks(messageElement);
+                                    }
+                                    
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
+                            } catch (e) {
+                                console.error('解析 JSON 失败:', e);
+                            }
+                        }
+                    }
+                }
+                
+                // 如果是Reasoner模型，隐藏Thinking状态
+                if (selectedModel === 'deepseek-reasoner') {
+                    isThinking = false;
+                    hideThinkingIndicator();
+                }
+                
+                // 添加到对话历史
+                if (assistantMessage) {
+                    currentConversation.history.push({ 
+                        role: 'assistant', 
+                        content: assistantMessage,
+                        ...(isReasonerModel && reasoningContent ? { reasoning_content: reasoningContent } : {})
+                    });
+                    saveConversations();
+                    
+                    // 确保MathJax渲染完成
+                    if (window.MathJax && messageElement) {
+                        MathJax.typesetPromise([messageElement]).catch(err => {
+                            console.error('MathJax渲染错误:', err);
+                        });
+                    }
+                }
+                
+            } catch (error) {
+                console.error('请求出错:', error);
+                chatContainer.removeChild(typingIndicator);
+                if (selectedModel === 'deepseek-reasoner') {
+                    isThinking = false;
+                    hideThinkingIndicator();
+                }
+                addMessage('assistant', `抱歉，发生了错误: ${error.message}`, false, currentConversation.id);
+            } finally {
+                isWaitingForResponse = false;
+                sendButton.disabled = userInput.value.trim() === '';
+                // 发送消息后清除文件信息
+                removeFileInfo();
+            }
+        }
+        
+        // 显示Thinking状态
+        function showThinkingIndicator() {
+            const thinkingIndicator = document.createElement('div');
+            thinkingIndicator.className = 'thinking-indicator';
+            thinkingIndicator.id = 'thinking-indicator';
+            thinkingIndicator.innerHTML = `
+                <span class="material-icons">hourglass_empty</span>
+                <span>思考中...</span>
+            `;
+            chatContainer.appendChild(thinkingIndicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // 隐藏Thinking状态
+        function hideThinkingIndicator() {
+            const indicator = document.getElementById('thinking-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+        
+        // 添加消息到聊天界面
+        function addMessage(role, content, isStreaming = false, conversationId = null, reasoningContent = null, fileInfo = null) {
+            if (conversationId && conversationId !== currentConversationId) return null;
+            const currentConversation = getCurrentConversation();
+            if (!currentConversation) return null;
+
+
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const avatarIcon = role === 'user' ? 'person' : 'smart_toy';
+            const roleName = role === 'user' ? '你' : 'DeepSeek AI';
+            
+            let processedContent = content;
+            // 如果是历史消息且有文件信息，只显示文件名
+            if (!isStreaming && role === 'user' && fileInfo) {
+                processedContent = "已上传文件";
+            } else if (!isStreaming) {
+                processedContent = marked.parse(content);
+            }
+            
+            // 文件信息显示
+            let fileHtml = '';
+            if (fileInfo) {
+                fileHtml = `
+                    <div class="file-message">
+                        <span class="material-icons">description</span>
+                        <span class="file-name">${fileInfo.name}</span>
+                    </div>
+                `;
+            }
+            
+            // 如果有推理内容，添加到消息中
+            let reasoningHtml = '';
+            if (reasoningContent) {
+                reasoningHtml = `
+                    <div class="reasoning-container">
+                        <div class="reasoning-header" onclick="toggleReasoning(this)">
+                            <div class="reasoning-toggle">
+                                <span class="material-icons">expand_more</span>
+                                <span>查看推理过程</span>
+                            </div>
+                        </div>
+                        <div class="reasoning-content">${reasoningContent}</div>
+                    </div>
+                `;
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="avatar">
+                    <span class="material-icons">${avatarIcon}</span>
+                </div>
+                <div class="message-content">
+                    <div class="message-role">${roleName}</div>
+                    ${fileHtml}
+                    <div class="message-text">${processedContent}</div>
+                    ${reasoningHtml}
+                </div>
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            if (!isStreaming) {
+                highlightCodeBlocks(messageDiv);
+                if (window.MathJax) {
+                    MathJax.typesetPromise([messageDiv]).catch(err => {
+                        console.error('MathJax渲染错误:', err);
+                    });
+                }
+            }
+            
+            return messageDiv;
+        }
+        
+        // 高亮代码块并添加复制按钮
+        function highlightCodeBlocks(messageElement) {
+            const codeBlocks = messageElement.querySelectorAll('pre code');
+            codeBlocks.forEach((block) => {
+                // 添加 tex-ignore 类来阻止 MathJax 处理
+                block.classList.add('tex-ignore');
+                hljs.highlightElement(block);
+                
+                // 获取代码块的父元素pre
+                const preElement = block.closest('pre');
+                
+                // 如果还没有复制按钮，则添加一个
+                if (!preElement.querySelector('.copy-code-button')) {
+                    const copyButton = document.createElement('button');
+                    copyButton.className = 'copy-code-button';
+                    copyButton.innerHTML = `
+                        <span class="material-icons" style="font-size: 14px;">content_copy</span>
+                        <span>复制</span>
+                    `;
+                    
+                    // 添加点击事件
+                    copyButton.addEventListener('click', () => {
+                        const codeToCopy = block.textContent;
+                        navigator.clipboard.writeText(codeToCopy).then(() => {
+                            // 临时更改按钮文本显示"已复制"
+                            const icon = copyButton.querySelector('.material-icons');
+                            const text = copyButton.querySelector('span:not(.material-icons)');
+                            icon.textContent = 'done';
+                            text.textContent = '已复制';
+                            
+                            // 2秒后恢复原状
+                            setTimeout(() => {
+                                icon.textContent = 'content_copy';
+                                text.textContent = '复制';
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('复制失败:', err);
+                        });
+                    });
+                    
+                    preElement.appendChild(copyButton);
+                }
+            });
+        }
+        
+        // 切换推理内容的函数
+        function toggleReasoning(headerElement) {
+            const container = headerElement.parentElement;
+            const content = container.querySelector('.reasoning-content');
+            const icon = headerElement.querySelector('.material-icons');
+            
+            content.classList.toggle('visible');
+            
+            if (content.classList.contains('visible')) {
+                icon.textContent = 'expand_less';
+                headerElement.querySelector('span:last-child').textContent = '隐藏推理过程';
+            } else {
+                icon.textContent = 'expand_more';
+                headerElement.querySelector('span:last-child').textContent = '查看推理过程';
+            }
+        }
+        
+        // 监听模型切换
+        modelSelect.addEventListener('change', () => {
+            const currentConversation = getCurrentConversation();
+            if (currentConversation) {
+                currentConversation.model = modelSelect.value;
+                saveConversations();
+            }
+            addMessage('assistant', `已切换到 ${modelSelect.value} 模型。`, false, currentConversationId);
+        });
+    </script>
+</body>
+</html>
